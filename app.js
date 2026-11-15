@@ -1,22 +1,24 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-import { W, SPEEDS, AU_UNITS, SKYBOX_RADIUS, STAR_COUNTS, DRAG_PX,
-         compressedRadius, trueRadius } from './src/config.js';
+import { SPEEDS, AU_UNITS, DRAG_PX } from './src/config.js';
 import {
-  time, view, isCoarse, lowPower, qualityScale,
+  time, view, sel, lowPower, qualityScale,
   parseUrlParams, bodyRadiusUnits, moonOrbitUnits,
 } from './src/state.js';
 import { BODIES, MOONS, KEPLER_BODIES } from './src/data/bodies.js';
-import { CONSTELLATIONS, BRIGHT_STARS } from './src/data/sky.js';
-import {
-  J2000_MS, OBLIQUITY, daysSinceJ2000, eqToEct, toScene, formatUtc,
-} from './src/astronomy/coordinates.js';
-import { keplerScenePos, keplerScenePosFromE } from './src/astronomy/kepler.js';
-import { helioVector, geoMoon } from './src/astronomy/ephemeris.js';
+import { eqToEct, formatUtc } from './src/astronomy/coordinates.js';
+import { keplerScenePos } from './src/astronomy/kepler.js';
+import { helioVector } from './src/astronomy/ephemeris.js';
 import { initBodies, bodiesByKey, moonsByKey } from './src/scene/bodies.js';
 import { initStructures, updateBelts, beltGroups, orbitLines } from './src/scene/structures.js';
+import { labelsRoot, initLabels, updateLabels } from './src/scene/labels.js';
+import {
+  initSky, constellationGroup, brightStarsGroup, skyGridGroup,
+  updateConstellationLabels, updateBrightStarLabels,
+} from './src/scene/sky.js';
 import { clampDt, advanceClock, changeSpeed, togglePause } from './src/systems/time.js';
+import { playChime, onSoundToggle } from './src/audio.js';
 
 /* ================================================================== */
 /* WebGL2 guard                                                        */
@@ -135,109 +137,12 @@ function fmtYear(d) {
 /* ================================================================== */
 const { updatePositions } = initBodies({ scene, textureLoader, renderer });
 initStructures({ scene, textureLoader });
-
-/* ================================================================== */
-/* Labels — projected DOM, quiet and thin                              */
-/* ================================================================== */
-const labelsRoot = document.getElementById('labels');
-const labels = []; // { el, obj (Object3D) or pos (world Vector3), parentKey }
-function addLabel(name, target, opts = {}) {
-  const el = document.createElement('div');
-  el.className = 'label' + (opts.small ? ' small' : '');
-  el.textContent = name;
-  el.style.display = 'none';
-  labelsRoot.appendChild(el);
-  labels.push({
-    el,
-    obj: target.isObject3D ? target : null,
-    pos: target.isVector3 ? target : null,
-    parentKey: opts.parentKey || null,
-  });
-}
-addLabel('Sun', new THREE.Vector3(0, 0, 0));
-for (const rec of Object.values(bodiesByKey)) {
-  if (rec.body.sun) continue;
-  addLabel(rec.body.name, rec.group);
-}
-for (const rec of Object.values(moonsByKey)) {
-  addLabel(rec.moon.name, rec.group, { small: true, parentKey: rec.moon.parent });
-}
-
-const _proj = new THREE.Vector3();
-const _world = new THREE.Vector3();
-function updateLabels() {
-  if (!view.labels) return;
-  const camPos = camera.position;
-  const labelCandidates = [];
-  for (const L of labels) {
-    if (L.parentKey) {
-      const parentPos = bodiesByKey[L.parentKey].group.position;
-      const dist = camPos.distanceTo(parentPos);
-      L.el.style.display = dist < 130 ? 'block' : 'none';
-      if (L.el.style.display === 'none') continue;
-    }
-    if (L.obj) L.obj.getWorldPosition(_world);
-    else _world.copy(L.pos);
-    const d = camPos.distanceTo(_world);
-    _proj.copy(_world).project(camera);
-    if (_proj.z > 1 || _proj.z < -1) { L.el.style.display = 'none'; continue; }
-    const x = (_proj.x * 0.5 + 0.5) * window.innerWidth;
-    const y = (-_proj.y * 0.5 + 0.5) * window.innerHeight;
-    if (x < -60 || x > window.innerWidth + 60 || y < -30 || y > window.innerHeight + 30) {
-      L.el.style.display = 'none'; continue;
-    }
-    // dim distant labels; keep selected/nearby clearer
-    const isSelected = selected && L.obj === selected.rec.group;
-    const alpha = isSelected ? 1 : Math.max(0.25, Math.min(1, 1.15 - d / 3500));
-    L.el.style.display = 'block';
-    L.el.style.left = x + 'px';
-    L.el.style.top = y + 'px';
-    L.el.style.opacity = alpha.toFixed(2);
-    labelCandidates.push({ L, x, y, d, priority: isSelected ? 2 : (L.parentKey ? 0 : 1) });
-  }
-  // simple deconfliction: hide lower-priority labels that overlap
-  labelCandidates.sort((a,b) => b.priority - a.priority || a.d - b.d);
-  const placed = [];
-  for (const c of labelCandidates) {
-    if (c.L.el.style.display === 'none') continue;
-    const w = c.L.parentKey ? 46 : 60, h = 14;
-    let hit = false;
-    for (const p of placed) {
-      if (Math.abs(c.x - p.x) < (w/2 + p.w/2) && Math.abs(c.y - p.y) < (h/2 + p.h/2)) { hit = true; break; }
-    }
-    if (hit && c.priority < 2) { c.L.el.style.display = 'none'; }
-    else placed.push({ x:c.x, y:c.y, w, h });
-  }
-}
-function updateConstellationLabels() {
-  if (!view.constellations) {
-    for (const L of constLabels) L.el.style.display = 'none';
-    hideConstTooltip();
-    return;
-  }
-  for (const L of constLabels) {
-    _proj.copy(L.pos).project(camera);
-    if (_proj.z > 1 || _proj.z < -1) { L.el.style.display = 'none'; continue; }
-    const x = (_proj.x * 0.5 + 0.5) * window.innerWidth;
-    const y = (-_proj.y * 0.5 + 0.5) * window.innerHeight;
-    if (x < -40 || x > window.innerWidth + 40 || y < -20 || y > window.innerHeight + 20) {
-      L.el.style.display = 'none'; continue;
-    }
-    L.el.style.display = 'block';
-    L.el.style.left = x + 'px';
-    L.el.style.top = y + 'px';
-  }
-}
+initLabels();
+initSky({ scene, textureLoader, labelsRoot });
 
 /* ================================================================== */
 /* Toggles (labels / orbits / true scale / belts), remembered          */
 /* ================================================================== */
-let constellationGroup = null;
-let constLabels = [];
-let hideConstTooltip = () => {};
-let brightStarsGroup = new THREE.Group();
-let skyGridGroup = new THREE.Group();
-let brightStarLabels = [];
 const toggleBtns = [...document.querySelectorAll('#toggles button')];
 function applyToggles() {
   for (const rec of Object.values(bodiesByKey)) {
@@ -281,161 +186,6 @@ try {
 applyToggles();
 parseUrlParams();
 refreshHud();
-
-/* ================================================================== */
-/* Starfield (from the Phase 2 scaffold)                               */
-/* ================================================================== */
-const milkyWay = textureLoader.load(
-  W + '0/0e/Solarsystemscope_texture_2k_stars_milky_way.jpg'
-);
-milkyWay.colorSpace = THREE.SRGBColorSpace;
-scene.add(new THREE.Mesh(
-  new THREE.SphereGeometry(SKYBOX_RADIUS, 48, 24),
-  new THREE.MeshBasicMaterial({ map: milkyWay, side: THREE.BackSide })
-));
-
-const STAR_COUNT = lowPower ? STAR_COUNTS.low : STAR_COUNTS.high;
-const starGeo = new THREE.BufferGeometry();
-{
-  const positions = new Float32Array(STAR_COUNT * 3);
-  for (let i = 0; i < STAR_COUNT; i++) {
-    const r = SKYBOX_RADIUS * 0.95;
-    const u = Math.random() * 2 - 1;
-    const theta = Math.random() * Math.PI * 2;
-    const s = Math.sqrt(1 - u * u);
-    positions[i * 3]     = r * s * Math.cos(theta);
-    positions[i * 3 + 1] = r * u;
-    positions[i * 3 + 2] = r * s * Math.sin(theta);
-  }
-  starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-}
-const starMat = new THREE.PointsMaterial({
-  color: 0xf2efe6, size: lowPower ? 18 : 14, sizeAttenuation: true, transparent: true, opacity: 0.9,
-});
-const starPoints = new THREE.Points(starGeo, starMat);
-scene.add(starPoints);
-
-/* ================================================================== */
-/* CONSTELLATIONS — famous stick figures on the celestial sphere       */
-/* ================================================================== */
-constellationGroup = new THREE.Group();
-constLabels = [];
-{
-  const R = SKYBOX_RADIUS * 0.94;
-  const rad = (d) => d * Math.PI / 180;
-  const radec = (rah, decd) => {
-    const ra = rah * 15 * Math.PI / 180;
-    const dec = rad(decd);
-    return new THREE.Vector3(
-      R * Math.cos(dec) * Math.cos(ra),
-      R * Math.sin(dec),
-      -R * Math.cos(dec) * Math.sin(ra)
-    );
-  };
-
-  const linePos = [];
-  const constTooltip = document.getElementById('const-tooltip');
-  function showConstTooltip(name, intro, x, y) {
-    if (!constTooltip) return;
-    constTooltip.innerHTML = `<b>${name}</b><br><span style="color:rgba(242,239,230,0.85)">${intro}</span>`;
-    constTooltip.style.left = Math.min(x + 12, window.innerWidth - 260) + 'px';
-    constTooltip.style.top = Math.min(y + 12, window.innerHeight - 80) + 'px';
-    constTooltip.classList.add('show');
-  }
-  hideConstTooltip = () => { if (constTooltip) constTooltip.classList.remove('show'); }; // assigned to outer scope
-
-  for (const c of CONSTELLATIONS) {
-    const pts = c.stars.map(s => radec(s[0], s[1]));
-    for (const [a,b] of c.lines) {
-      linePos.push(pts[a].x, pts[a].y, pts[a].z, pts[b].x, pts[b].y, pts[b].z);
-    }
-    const lp = radec(c.label[0], c.label[1]);
-    const el = document.createElement('div');
-    el.className = 'const-label';
-    el.textContent = c.name;
-    el.style.display = 'none';
-    el.addEventListener('mouseenter', (e) => showConstTooltip(c.name, c.intro, e.clientX, e.clientY));
-    el.addEventListener('mousemove', (e) => showConstTooltip(c.name, c.intro, e.clientX, e.clientY));
-    el.addEventListener('mouseleave', hideConstTooltip);
-    el.addEventListener('click', (e) => { e.stopPropagation(); showConstTooltip(c.name, c.intro, e.clientX, e.clientY); });
-    labelsRoot.appendChild(el);
-    constLabels.push({ el, pos: lp });
-  }
-  const lineGeo = new THREE.BufferGeometry();
-  lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePos, 3));
-  const lineMat = new THREE.LineBasicMaterial({ color: 0x8fa3bf, transparent: true, opacity: 0.22 });
-  const lines = new THREE.LineSegments(lineGeo, lineMat);
-  constellationGroup.add(lines);
-  scene.add(constellationGroup);
-}
-
-/* ================================================================== */
-/* BRIGHT STARS & SKY GRID                                             */
-/* ================================================================== */
-{
-  const R = SKYBOX_RADIUS * 0.93;
-  const rad = (d) => d * Math.PI / 180;
-  const radec = (rah, decd) => {
-    const ra = rah * 15 * Math.PI / 180;
-    const dec = rad(decd);
-    return new THREE.Vector3(R*Math.cos(dec)*Math.cos(ra), R*Math.sin(dec), -R*Math.cos(dec)*Math.sin(ra));
-  };
-  const constTooltip = document.getElementById('const-tooltip');
-  function showTip(name, intro, x, y) {
-    if (!constTooltip) return;
-    constTooltip.innerHTML = `<b>${name}</b><br><span style="color:rgba(242,239,230,0.85)">${intro}</span>`;
-    constTooltip.style.left = Math.min(x + 12, window.innerWidth - 260) + 'px';
-    constTooltip.style.top = Math.min(y + 12, window.innerHeight - 80) + 'px';
-    constTooltip.classList.add('show');
-  }
-  const starGeoPts = new THREE.BufferGeometry();
-  const posArr = [];
-  BRIGHT_STARS.forEach(s => {
-    const pEq = radec(s.ra, s.dec);
-    // keep in equatorial frame for consistency with constellations
-    posArr.push(pEq.x, pEq.y, pEq.z);
-    const el = document.createElement('div');
-    el.className = 'const-label';
-    el.style.color = 'rgba(242,239,230,0.7)';
-    el.textContent = s.name;
-    el.style.display = 'none';
-    el.addEventListener('mouseenter', (e) => showTip(s.name, s.info, e.clientX, e.clientY));
-    el.addEventListener('mousemove', (e) => showTip(s.name, s.info, e.clientX, e.clientY));
-    el.addEventListener('mouseleave', hideConstTooltip);
-    el.addEventListener('click', (e) => { e.stopPropagation(); showTip(s.name, s.info, e.clientX, e.clientY); });
-    labelsRoot.appendChild(el);
-    brightStarLabels.push({ el, pos: pEq });
-  });
-  starGeoPts.setAttribute('position', new THREE.Float32BufferAttribute(posArr, 3));
-  brightStarsGroup.add(new THREE.Points(starGeoPts, new THREE.PointsMaterial({ color: 0xffffff, size: 22, sizeAttenuation: true })));
-  scene.add(brightStarsGroup);
-
-  // Grid: celestial equator and ecliptic (great circles)
-  function circleLine(radius, yFunc, color, opacity=0.18) {
-    const pts = [];
-    for (let i=0;i<=128;i++){ const a=i/128*Math.PI*2; const x=Math.cos(a), z=Math.sin(a); const y=yFunc?yFunc(a):0; pts.push(new THREE.Vector3(x*radius,y*radius,z*radius)); }
-    const g=new THREE.BufferGeometry().setFromPoints(pts);
-    return new THREE.Line(g, new THREE.LineBasicMaterial({ color, transparent:true, opacity }));
-  }
-  // Celestial equator in equatorial frame
-  skyGridGroup.add(circleLine(R*0.92, ()=>0, 0x6aa7ff, 0.16));
-  // Ecliptic: equator tilted by obliquity around X axis (approx in our coords)
-  const eclPts=[]; for(let i=0;i<=128;i++){const a=i/128*Math.PI*2; const v=new THREE.Vector3(Math.cos(a),0,Math.sin(a)).applyAxisAngle(new THREE.Vector3(1,0,0), OBLIQUITY); eclPts.push(v.multiplyScalar(R*0.92)); }
-  skyGridGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(eclPts), new THREE.LineBasicMaterial({ color:0xd9b36a, transparent:true, opacity:0.16 })));
-  scene.add(skyGridGroup);
-}
-
-function updateBrightStarLabels() {
-  if (!view.brightStars) { for (const L of brightStarLabels) L.el.style.display = 'none'; return; }
-  for (const L of brightStarLabels) {
-    _proj.copy(L.pos).project(camera);
-    if (_proj.z > 1 || _proj.z < -1) { L.el.style.display = 'none'; continue; }
-    const x = (_proj.x * 0.5 + 0.5) * window.innerWidth;
-    const y = (-_proj.y * 0.5 + 0.5) * window.innerHeight;
-    if (x < -40 || x > window.innerWidth + 40 || y < -20 || y > window.innerHeight + 20) { L.el.style.display = 'none'; continue; }
-    L.el.style.display = 'block'; L.el.style.left = x + 'px'; L.el.style.top = y + 'px';
-  }
-}
 
 /* ================================================================== */
 /* TIME MACHINE                                                         */
@@ -489,63 +239,6 @@ NOTABLE_EVENTS.forEach(ev => {
 });
 
 /* ================================================================== */
-/* SOUND — Web Audio ambience + arrival chime, mute by default         */
-/* ================================================================== */
-let audioCtx = null, ambience = null, masterGain = null;
-function ensureAudio() {
-  if (audioCtx) return;
-  const AC = window.AudioContext || window.webkitAudioContext;
-  if (!AC) return;
-  audioCtx = new AC();
-  masterGain = audioCtx.createGain();
-  masterGain.gain.value = 0.0001;
-  masterGain.connect(audioCtx.destination);
-
-  // subtle drone: two detuned oscillators through slow filter sweep
-  const o1 = audioCtx.createOscillator(), o2 = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  const f = audioCtx.createBiquadFilter();
-  o1.type = 'sine'; o2.type = 'triangle';
-  o1.frequency.value = 55; o2.frequency.value = 55.6;
-  g.gain.value = 0.03;
-  f.type = 'lowpass'; f.frequency.value = 220; f.Q.value = 0.7;
-  o1.connect(f); o2.connect(f); f.connect(g); g.connect(masterGain);
-  o1.start(); o2.start();
-  // slow sweep
-  const lfo = audioCtx.createOscillator(); const lfoG = audioCtx.createGain();
-  lfo.frequency.value = 0.05; lfoG.gain.value = 80;
-  lfo.connect(lfoG); lfoG.connect(f.frequency); lfo.start();
-  ambience = { o1, o2, g, f };
-}
-function setAudioEnabled(on) {
-  if (on) {
-    ensureAudio();
-    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-    if (masterGain) masterGain.gain.setTargetAtTime(0.12, audioCtx.currentTime, 0.3);
-  } else if (masterGain && audioCtx) {
-    masterGain.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.2);
-  }
-}
-function playChime() {
-  if (!view.sound || !audioCtx || !masterGain) return;
-  const t = audioCtx.currentTime;
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.type = 'sine';
-  o.frequency.setValueAtTime(880, t);
-  o.frequency.exponentialRampToValueAtTime(1320, t + 0.12);
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(0.08, t + 0.02);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
-  o.connect(g); g.connect(masterGain);
-  o.start(t); o.stop(t + 0.7);
-}
-function onSoundToggle() {
-  setAudioEnabled(view.sound);
-  if (view.sound) { try { localStorage.setItem('sol-toggles', JSON.stringify(view)); } catch {} }
-}
-
-/* ================================================================== */
 /* INFO PANEL                                                           */
 /* ================================================================== */
 const infoPanel = document.getElementById('info-panel');
@@ -557,7 +250,7 @@ infoClose.addEventListener('click', () => infoPanel.classList.remove('open'));
 // btnReplay wired after tour is defined
 
 function showCustomCard({ name, type, stats = [], fact = '' }) {
-  selected = null; follow = false; fly = null; setStripSelection(null);
+  sel.current = null; sel.follow = false; sel.fly = null; setStripSelection(null);
   controls.zoomToCursor = true;
   factCardTarget = null;
   factName.textContent = name;
@@ -698,9 +391,6 @@ function bodyDisplayRadius(s) {
   return s.rec.scaleR || bodyRadiusUnits(s.body.radiusKm);
 }
 
-let selected = null;
-let follow = false;
-let fly = null; // { fromPos, toPos, fromTarget, toTarget, t0, dur }
 let factCardTarget = null;
 
 function auDist(a, b) { return a.distanceTo(b) / AU_UNITS; }
@@ -756,9 +446,9 @@ function setStripSelection(key) {
 }
 
 function deselect() {
-  selected = null;
-  follow = false;
-  fly = null;
+  sel.current = null;
+  sel.follow = false;
+  sel.fly = null;
   controls.zoomToCursor = true; // back to cursor-anchored free zoom
   closeFactCard();
   setStripSelection(null);
@@ -771,9 +461,9 @@ function deselect() {
 }
 
 function flyTo(s, immediate = false) {
-  selected = s;
-  follow = false;
-  controls.zoomToCursor = false; // keep zoom centred on the selected body
+  sel.current = s;
+  sel.follow = false;
+  controls.zoomToCursor = false; // keep zoom centred on the sel.current body
   openFactCard(s);
   setStripSelection(s.key);
   try {
@@ -807,10 +497,10 @@ function flyTo(s, immediate = false) {
   if (immediate) {
     controls.target.copy(toTarget);
     camera.position.copy(toPos);
-    fly = null;
-    follow = true;
+    sel.fly = null;
+    sel.follow = true;
   } else {
-    fly = {
+    sel.fly = {
       fromPos: camera.position.clone(),
       toPos,
       fromTarget: controls.target.clone(),
@@ -891,7 +581,7 @@ canvas.addEventListener('pointercancel', () => { down = null; });
 // Keyboard
 function stepSelection(dir) {
   const list = majorKeys;
-  let idx = selected ? list.indexOf(selected.key) : -1;
+  let idx = sel.current ? list.indexOf(sel.current.key) : -1;
   if (idx === -1) idx = dir > 0 ? 0 : list.length - 1;
   else idx = (idx + dir + list.length) % list.length;
   flyTo(selectableByKey[list[idx]]);
@@ -901,7 +591,7 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'Space') { e.preventDefault(); togglePause(time); refreshHud(); }
   else if (e.code === 'Escape') {
     if (infoPanel.classList.contains('open')) infoPanel.classList.remove('open');
-    else if (selected) deselect();
+    else if (sel.current) deselect();
     else resetHome(false);
   }
   else if (e.code === 'ArrowRight') { e.preventDefault(); stepSelection(1); }
@@ -926,14 +616,14 @@ function easeInOutQuint(t) { return t < 0.5 ? 16*t*t*t*t*t : 1 - Math.pow(-2*t +
 
 function resetHome(immediate = false) {
   if (tour) { stopTour(true); return; }
-  selected = null; follow = false; fly = null; closeFactCard(); setStripSelection(null);
+  sel.current = null; sel.follow = false; sel.fly = null; closeFactCard(); setStripSelection(null);
   controls.zoomToCursor = true;
   try { const u = new URL(location.href); u.searchParams.delete('body'); history.replaceState(null,'',u); } catch {}
   if (immediate) {
     controls.target.set(0,0,0);
     camera.position.set(0, 420, 1450);
   } else {
-    fly = {
+    sel.fly = {
       fromPos: camera.position.clone(),
       toPos: new THREE.Vector3(0, 420, 1450),
       fromTarget: controls.target.clone(),
@@ -947,8 +637,8 @@ function resetHome(immediate = false) {
 
 function updateInteraction() {
   // Follow moving body: translate camera by body's movement to keep relative view
-  if (follow && selected && !fly) {
-    bodyWorldPos(selected, _wp);
+  if (sel.follow && sel.current && !sel.fly) {
+    bodyWorldPos(sel.current, _wp);
     _dir.copy(_wp).sub(controls.target);
     if (_dir.lengthSq() > 0) {
       controls.target.add(_dir);
@@ -956,23 +646,23 @@ function updateInteraction() {
     }
   }
   // Fly animation
-  if (fly) {
-    const t = Math.min(1, (performance.now() - fly.t0) / fly.dur);
-    const k = fly.home ? easeInOutCubic(t) : easeInOutQuint(t);
-    controls.target.lerpVectors(fly.fromTarget, fly.toTarget, k);
-    camera.position.lerpVectors(fly.fromPos, fly.toPos, k);
+  if (sel.fly) {
+    const t = Math.min(1, (performance.now() - sel.fly.t0) / sel.fly.dur);
+    const k = sel.fly.home ? easeInOutCubic(t) : easeInOutQuint(t);
+    controls.target.lerpVectors(sel.fly.fromTarget, sel.fly.toTarget, k);
+    camera.position.lerpVectors(sel.fly.fromPos, sel.fly.toPos, k);
     // keep target tracking body as it moves during flight
-    if (selected && !fly.home) {
-      bodyWorldPos(selected, _wp);
-      const drift = _wp.clone().sub(fly.toTarget);
-      fly.toTarget.add(drift);
+    if (sel.current && !sel.fly.home) {
+      bodyWorldPos(sel.current, _wp);
+      const drift = _wp.clone().sub(sel.fly.toTarget);
+      sel.fly.toTarget.add(drift);
       controls.target.add(drift.multiplyScalar(k * 0.15));
     }
     if (t >= 1) {
-      const wasHome = !!fly.home;
-      fly = null;
-      if (wasHome) { follow = false; }
-      else { follow = true; playChime(); }
+      const wasHome = !!sel.fly.home;
+      sel.fly = null;
+      if (wasHome) { sel.follow = false; }
+      else { sel.follow = true; playChime(); }
     }
   }
 }
@@ -1047,7 +737,7 @@ function stopTour(toFree = true) {
   showNarration('');
   controls.enabled = true;
   if (toFree) {
-    selected = null; follow = false; fly = null; closeFactCard(); setStripSelection(null);
+    sel.current = null; sel.follow = false; sel.fly = null; closeFactCard(); setStripSelection(null);
     controls.zoomToCursor = true;
     controls.target.set(0,0,0);
     camera.position.set(0, 420, 1450);
@@ -1244,9 +934,9 @@ renderer.setAnimationLoop(() => {
   if (frameCount % 10 === 0) updateFactCardLive(); // distances change slowly
   // throttle label work on low-power devices
   if (!lowPower || (frameCount % 2 === 0)) {
-    updateLabels();
-    updateConstellationLabels();
-    updateBrightStarLabels();
+    updateLabels(camera);
+    updateConstellationLabels(camera);
+    updateBrightStarLabels(camera);
   }
   if (tour) updateTour(performance.now());
   else updateInteraction();
