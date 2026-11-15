@@ -1,0 +1,11 @@
+{
+  "name": "solar-system",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A real-3D solar system you can explore in the browser — planets in their actual positions for any date.",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test tests/"
+  }
+}
