@@ -58,3 +58,10 @@ Polish/features verified 2026-11-14 (headless Brave over HTTP `http://127.0.0.1:
 | 2026-11-15 | Regression fix | app.js | Hoisted brightStarsGroup/skyGridGroup/brightStarLabels declarations above applyToggles to fix TDZ startup ReferenceError | ~+4 | ~-3 |
 
 Fix verified 2026-11-15 in headless Brave: after hoisting, `?tour=0`, `?body=hale-bopp`, and `?body=vesta` loaded without runtime errors. NOTE: these headless runs used unique browser profiles and therefore re-fetched CDN assets; flagged as a data-saver violation. Checkpoint refreshed locally (no network).
+| 2026-11-15 | Cursor zoom | app.js | Free-view zoom anchors to cursor (wheel) / pinch midpoint (touch); disabled on selection so a body stays centred | +8 | -0 |
+| 2026-11-15 | Docs sync | README.md, CREDITS.md, LICENSE | Rewrote public README; added detailed credits and MIT licence | +174 | -40 |
+| 2026-11-15 | Docs | Journal.md | Record cursor zoom and GitHub publication | ~+5 | -0 |
+
+Cursor zoom: verified against the pinned three.js 0.187 OrbitControls source
+(`zoomToCursor` supports wheel and pinch midpoint) and by `node --check` on
+app.js. Full browser runtime check deferred to respect the data-saver limit.

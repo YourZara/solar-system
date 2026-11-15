@@ -38,6 +38,9 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.06;
 controls.minDistance = 8;
 controls.maxDistance = 15000;
+// Free exploration: zoom toward the cursor (wheel) or pinch midpoint (touch).
+// flyTo() turns this off so a selected body stays centred while zooming.
+controls.zoomToCursor = true;
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -1165,6 +1168,7 @@ infoClose.addEventListener('click', () => infoPanel.classList.remove('open'));
 
 function showCustomCard({ name, type, stats = [], fact = '' }) {
   selected = null; follow = false; fly = null; setStripSelection(null);
+  controls.zoomToCursor = true;
   factCardTarget = null;
   factName.textContent = name;
   factType.textContent = type || '';
@@ -1365,6 +1369,7 @@ function deselect() {
   selected = null;
   follow = false;
   fly = null;
+  controls.zoomToCursor = true; // back to cursor-anchored free zoom
   closeFactCard();
   setStripSelection(null);
   // keep camera where it is, just stop following
@@ -1378,6 +1383,7 @@ function deselect() {
 function flyTo(s, immediate = false) {
   selected = s;
   follow = false;
+  controls.zoomToCursor = false; // keep zoom centred on the selected body
   openFactCard(s);
   setStripSelection(s.key);
   try {
@@ -1532,6 +1538,7 @@ function easeInOutQuint(t) { return t < 0.5 ? 16*t*t*t*t*t : 1 - Math.pow(-2*t +
 function resetHome(immediate = false) {
   if (tour) { stopTour(true); return; }
   selected = null; follow = false; fly = null; closeFactCard(); setStripSelection(null);
+  controls.zoomToCursor = true;
   try { const u = new URL(location.href); u.searchParams.delete('body'); history.replaceState(null,'',u); } catch {}
   if (immediate) {
     controls.target.set(0,0,0);
@@ -1652,6 +1659,7 @@ function stopTour(toFree = true) {
   controls.enabled = true;
   if (toFree) {
     selected = null; follow = false; fly = null; closeFactCard(); setStripSelection(null);
+    controls.zoomToCursor = true;
     controls.target.set(0,0,0);
     camera.position.set(0, 420, 1450);
   }
