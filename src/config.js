@@ -33,3 +33,11 @@ export const STAR_COUNTS = { low: 3000, high: 6000 };
 
 /* Tap-vs-drag threshold, in CSS pixels. */
 export const DRAG_PX = 6;
+
+/* ================================================================== */
+/* Easings — pure functions of t in [0, 1]. Camera flights use these,  */
+/* so they live with the other pure numbers, not with the DOM.         */
+/* ================================================================== */
+export const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+export const easeOutQuint = (t) => 1 - Math.pow(1 - t, 5);
+export const easeInOutQuint = (t) => (t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2);
