@@ -1,0 +1,258 @@
+  :root {
+    --bg: #05060a;
+    --ink: #f2efe6;
+    --accent: #d9b36a; /* pale gold */
+    --glass: rgba(10, 12, 18, 0.55);
+    --edge: rgba(242, 239, 230, 0.12);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    overflow: hidden;
+  }
+  #scene-canvas { position: fixed; inset: 0; display: block; touch-action: none; }
+
+  /* ---------- HUD (glass, restrained; the 3D scene is the hero) ---------- */
+  .hud {
+    position: fixed; z-index: 10; user-select: none;
+    background: var(--glass);
+    border: 1px solid var(--edge);
+    border-radius: 14px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  #wordmark {
+    top: 16px; left: 16px; padding: 10px 16px;
+  }
+  #wordmark h1 {
+    font-size: 14px; font-weight: 500; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--ink);
+  }
+  #wordmark h1 b { color: var(--accent); font-weight: 500; }
+  #date-row { margin-top: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  #date-readout {
+    font-size: 13px; color: rgba(242,239,230,0.75);
+    font-variant-numeric: tabular-nums; letter-spacing: 0.04em;
+  }
+  .link-btn {
+    appearance: none; border: 0; background: transparent; color: var(--accent);
+    font: inherit; font-size: 12px; cursor: pointer; padding: 2px 0; opacity: 0.9;
+  }
+  .link-btn:hover { opacity: 1; text-decoration: underline; }
+  #time-machine {
+    margin-top: 8px; display: none; gap: 6px; align-items: center; flex-wrap: wrap;
+  }
+  #time-machine.open { display: flex; }
+  #tm-date {
+    background: rgba(242,239,230,0.06); color: var(--ink);
+    border: 1px solid var(--edge); border-radius: 8px;
+    padding: 5px 8px; font: inherit; font-size: 12px;
+  }
+  #tm-events { display: flex; gap: 4px; flex-wrap: wrap; width: 100%; margin-top: 2px; }
+  #tm-scrub { width: 160px; accent-color: var(--accent); }
+  .chip {
+    appearance: none; border: 1px solid var(--edge); background: rgba(242,239,230,0.04);
+    color: rgba(242,239,230,0.85); font: inherit; font-size: 11px;
+    padding: 4px 8px; border-radius: 999px; cursor: pointer;
+  }
+  .chip:hover { border-color: rgba(217,179,106,0.4); color: var(--ink); }
+
+  #toggles {
+    top: 16px; right: 16px;
+    display: flex; gap: 2px; padding: 5px;
+    flex-wrap: wrap; justify-content: flex-end; max-width: 330px;
+  }
+  #toggles button {
+    appearance: none; border: 0; cursor: pointer;
+    background: transparent; color: rgba(242,239,230,0.7);
+    font: inherit; font-size: 12px;
+    padding: 6px 11px; border-radius: 999px; line-height: 1; white-space: nowrap;
+  }
+  #toggles button:hover { background: rgba(242,239,230,0.08); }
+  #toggles button.on { color: var(--accent); background: rgba(217,179,106,0.10); }
+
+  #time-controls {
+    bottom: 16px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 4px; padding: 6px;
+  }
+  #time-controls button {
+    appearance: none; border: 0; cursor: pointer;
+    background: transparent; color: var(--ink);
+    font: inherit; font-size: 13px;
+    padding: 7px 13px; border-radius: 999px;
+    line-height: 1; white-space: nowrap;
+  }
+  #time-controls button:hover { background: rgba(242,239,230,0.08); }
+  #time-controls button.on { color: var(--accent); }
+  #speed-label {
+    min-width: 74px; text-align: center; font-size: 13px;
+    color: rgba(242,239,230,0.85); padding: 7px 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  #btn-pause { width: 34px; }
+
+  /* ---------- Labels (projected DOM, thin and quiet) ---------- */
+  #labels { position: fixed; inset: 0; z-index: 5; pointer-events: none; overflow: hidden; }
+  .label {
+    position: absolute; transform: translate(-50%, -140%);
+    font-size: 11px; letter-spacing: 0.08em;
+    color: rgba(242,239,230,0.82);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.9);
+    white-space: nowrap;
+  }
+  .label.small { font-size: 10px; color: rgba(242,239,230,0.6); }
+
+  /* ---------- Body strip ---------- */
+  #body-strip {
+    bottom: 66px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 6px; align-items: center;
+    padding: 8px 10px; max-width: min(92vw, 760px);
+    overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
+  }
+  #body-strip::-webkit-scrollbar { display: none; }
+  .strip-item {
+    appearance: none; border: 1px solid transparent; cursor: pointer;
+    background: transparent; color: var(--ink); font: inherit;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 6px 8px; border-radius: 10px; min-width: 52px; flex: 0 0 auto;
+  }
+  .strip-item:hover { background: rgba(242,239,230,0.07); }
+  .strip-item.selected { border-color: rgba(217,179,106,0.35); background: rgba(217,179,106,0.08); }
+  .strip-dot {
+    width: 22px; height: 22px; border-radius: 50%;
+    box-shadow: inset -3px -3px 6px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.08);
+  }
+  .strip-name { font-size: 10px; letter-spacing: 0.04em; color: rgba(242,239,230,0.85); }
+
+  /* ---------- Fact card ---------- */
+  #fact-card {
+    left: 16px; bottom: 118px; width: min(320px, calc(100vw - 32px));
+    max-height: min(52vh, 360px); overflow: auto;
+    padding: 14px 16px 14px 16px; display: none; z-index: 11;
+  }
+  #fact-card.open { display: block; }
+  #fact-close, #info-close {
+    position: absolute; top: 8px; right: 8px;
+    appearance: none; border: 0; background: transparent; color: rgba(242,239,230,0.7);
+    font: inherit; font-size: 18px; line-height: 1; cursor: pointer; padding: 4px 8px; border-radius: 8px;
+  }
+  #fact-close:hover, #info-close:hover { background: rgba(242,239,230,0.08); color: var(--ink); }
+  #fact-name { font-size: 20px; font-weight: 500; letter-spacing: 0.02em; padding-right: 24px; }
+  #fact-type { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-top: 2px; }
+  #fact-stats { margin-top: 10px; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; }
+  #fact-stats dt { color: rgba(242,239,230,0.6); }
+  #fact-stats dd { color: var(--ink); font-variant-numeric: tabular-nums; }
+  #fact-text { margin-top: 10px; font-size: 13px; line-height: 1.45; color: rgba(242,239,230,0.9); }
+
+  /* ---------- Info / credits panel ---------- */
+  #info-panel {
+    right: 16px; top: 64px; width: min(360px, calc(100vw - 32px));
+    max-height: calc(100vh - 140px); overflow: auto; padding: 14px 16px; display: none; z-index: 12;
+  }
+  #info-panel.open { display: block; }
+  #info-panel h2 { font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  #info-panel p, #info-panel li { font-size: 12px; line-height: 1.45; color: rgba(242,239,230,0.85); }
+  #info-panel ul { margin: 6px 0 10px 18px; }
+  #info-panel .info-actions { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* ---------- Constellation labels ---------- */
+  .const-label {
+    position: absolute; transform: translate(-50%, -50%);
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: rgba(217,179,106,0.55); text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+    white-space: nowrap; pointer-events: auto; cursor: help;
+  }
+  #const-tooltip {
+    position: fixed; z-index: 15; max-width: 240px; padding: 8px 10px;
+    font-size: 12px; line-height: 1.4; color: var(--ink);
+    background: var(--glass); border: 1px solid var(--edge); border-radius: 10px;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    display: none; pointer-events: none;
+  }
+  #const-tooltip.show { display: block; }
+
+  #milkyway-point {
+    right: 16px; bottom: 118px; z-index: 10;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 12px; cursor: pointer; color: var(--ink);
+    font: inherit; font-size: 12px; border: 1px solid var(--edge);
+  }
+  #milkyway-point:hover { border-color: rgba(217,179,106,0.35); }
+  .mw-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #fff, #c9d7ff 40%, #6b7aa8);
+    box-shadow: 0 0 8px rgba(180,200,255,0.6);
+  }
+
+  /* (chapters rendered inside info panel) */
+
+  /* ---------- Intro / grand tour overlay ---------- */
+  #intro {
+    position: fixed; inset: 0; z-index: 30; display: none; align-items: center; justify-content: center;
+    background: #000; color: var(--ink); text-align: center; padding: 24px;
+  }
+  #intro.open { display: flex; }
+  #intro-inner { max-width: 520px; }
+  #intro-title { font-size: 34px; font-weight: 500; letter-spacing: 0.06em; }
+  #intro-line { margin-top: 10px; font-size: 16px; color: rgba(242,239,230,0.8); font-style: italic; }
+  #intro-cta { margin-top: 22px; font-size: 13px; color: var(--accent); letter-spacing: 0.08em; }
+  #intro-narration {
+    position: fixed; left: 50%; bottom: 16vh; transform: translateX(-50%);
+    font-size: 15px; color: var(--ink); text-shadow: 0 2px 10px rgba(0,0,0,0.9);
+    z-index: 31; display: none; text-align: center; padding: 0 16px;
+  }
+  #intro-narration.show { display: block; }
+  #intro-skip {
+    position: fixed; top: 16px; right: 16px; z-index: 32; display: none;
+  }
+  #intro-skip.show { display: block; }
+
+  #toast {
+    position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%);
+    background: var(--glass); border: 1px solid var(--edge); color: var(--ink);
+    padding: 8px 14px; border-radius: 999px; font-size: 12px; z-index: 25;
+    opacity: 0; transition: opacity .25s; pointer-events: none;
+  }
+  #toast.show { opacity: 1; }
+
+  /* ---------- Loading line — honest progress while textures stream in ---------- */
+  #loading {
+    position: fixed; left: 50%; bottom: 8vh; transform: translateX(-50%);
+    font-size: 14px; letter-spacing: 0.08em; color: var(--ink);
+    text-shadow: 0 1px 6px rgba(0,0,0,0.8);
+    white-space: nowrap; z-index: 10; user-select: none;
+    transition: opacity 0.6s ease;
+  }
+  #loading.hidden { opacity: 0; pointer-events: none; }
+  #loading .bar {
+    margin-top: 8px; height: 2px; width: 220px;
+    background: rgba(242,239,230,0.15); border-radius: 1px; overflow: hidden;
+  }
+  #loading .bar i { display: block; height: 100%; width: 0%; background: var(--accent); }
+
+  /* ---------- No WebGL2 — say so, never a blank screen ---------- */
+  #nogl {
+    position: fixed; inset: 0; display: none; place-items: center;
+    text-align: center; padding: 24px; z-index: 20;
+  }
+
+  @media (max-width: 640px) {
+    #wordmark { top: 10px; left: 10px; padding: 8px 12px; max-width: calc(100vw - 20px); }
+    #wordmark h1 { font-size: 12px; }
+    #date-readout { font-size: 12px; }
+    #toggles { top: auto; bottom: 150px; right: 8px; left: 8px; max-width: none; justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+    #toggles::-webkit-scrollbar { display: none; }
+    #toggles button { padding: 9px 12px; font-size: 12px; min-height: 36px; }
+    #time-controls { bottom: 10px; gap: 2px; padding: 4px; max-width: calc(100vw - 16px); }
+    #time-controls button { padding: 10px 12px; font-size: 13px; min-height: 40px; }
+    #speed-label { min-width: 64px; font-size: 12px; }
+    #body-strip { bottom: 56px; padding: 6px 8px; gap: 4px; max-width: 96vw; }
+    .strip-item { min-width: 48px; padding: 6px 8px; min-height: 48px; }
+    .strip-dot { width: 22px; height: 22px; }
+    #fact-card { left: 8px; right: 8px; bottom: 198px; top: auto; width: auto; max-height: 38vh; border-radius: 16px 16px 14px 14px; }
+    #milkyway-point { right: 8px; bottom: 198px; padding: 8px 10px; }
+  }

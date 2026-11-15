@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<!--
+  The Solar System — a small machine of clockwork light.
+  Single-file real-3D solar system. No build step; externals only from
+  CORS-enabled CDNs, pinned versions.
+
+  Phase 3: Sun + 8 planets, real ephemeris (astronomy-engine), time controls,
+  UTC readout, orbit camera.
+  Phase 4: 7 moons, Saturn's rings, 4 dwarf planets (Kepler-propagated),
+  asteroid + Kuiper belts, Halley with a sunward tail, labels, orbit lines,
+  true-scale + belts toggles.
+  (Phase 2 scaffold: starfield, Milky Way skybox, loading line, WebGL2 guard.)
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Solar System</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<canvas id="scene-canvas" aria-label="3D solar system"></canvas>
+
+<!-- HUD -->
+<div id="wordmark" class="hud">
+  <h1>The <b>Solar</b> System</h1>
+  <div id="date-row">
+    <div id="date-readout" aria-live="polite">…</div>
+    <button type="button" id="tm-toggle" class="link-btn">Time machine</button>
+  </div>
+  <div id="time-machine">
+    <input type="date" id="tm-date" aria-label="Pick a date">
+    <button type="button" id="tm-go" class="chip">Go</button>
+    <button type="button" id="tm-today" class="chip">Today</button>
+    <button type="button" id="tm-now" class="chip">Tonight</button>
+    <input type="range" id="tm-scrub" min="-3650" max="3650" value="0" step="1" aria-label="Timeline scrubber" title="Scrub ±10 years around selected date">
+    <div id="tm-events" aria-label="Notable events"></div>
+  </div>
+</div>
+
+<div id="toggles" class="hud" role="toolbar" aria-label="View toggles">
+  <button type="button" data-toggle="labels" class="on">Labels</button>
+  <button type="button" data-toggle="orbits" class="on">Orbits</button>
+  <button type="button" data-toggle="constellations">Constellations</button>
+  <button type="button" data-toggle="brightStars">Stars</button>
+  <button type="button" data-toggle="grid">Grid</button>
+  <button type="button" data-toggle="trueScale">True scale</button>
+  <button type="button" data-toggle="belts" class="on">Belts</button>
+  <button type="button" data-toggle="sound">Sound</button>
+  <button type="button" id="btn-home" title="Reset view (Home)">⌂</button>
+  <button type="button" id="btn-info" title="Credits and replay">ⓘ</button>
+</div>
+
+<div id="time-controls" class="hud" role="toolbar" aria-label="Time controls">
+  <button type="button" id="btn-pause" title="Pause / play (Space later)">⏸</button>
+  <button type="button" id="btn-slower" title="Slower" aria-label="Slower">‹</button>
+  <span id="speed-label">1 day/s</span>
+  <button type="button" id="btn-faster" title="Faster" aria-label="Faster">›</button>
+</div>
+
+<div id="body-strip" class="hud" role="toolbar" aria-label="Bodies"></div>
+
+<div id="fact-card" class="hud" aria-live="polite">
+  <button type="button" id="fact-close" aria-label="Close">×</button>
+  <div id="fact-name"></div>
+  <div id="fact-type"></div>
+  <dl id="fact-stats"></dl>
+  <p id="fact-text"></p>
+</div>
+
+<div id="info-panel" class="hud" aria-live="polite">
+  <button type="button" id="info-close" aria-label="Close">×</button>
+  <h2>Explorer's Guide</h2>
+  <p>A real-3D solar system — accurate enough to trust, beautiful enough to feel.</p>
+  <div class="info-actions">
+    <button type="button" id="btn-replay" class="chip">Replay grand tour</button>
+  </div>
+
+  <h2 style="margin-top:12px">Chapters</h2>
+  <p style="margin-bottom:6px">Guided tour of what’s here:</p>
+  <div id="chapters-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px"></div>
+
+  <details style="margin-top:8px">
+    <summary style="cursor:pointer;color:var(--accent);font-size:12px">Read full guide</summary>
+    <h2 style="margin-top:10px">Our Galaxy</h2>
+    <p>The <b>Milky Way</b> is our home galaxy — a vast spiral of hundreds of billions of stars. The glowing band and starfield you see are a view from inside it; our entire solar system is just one tiny neighborhood within this galaxy.</p>
+    <h2 style="margin-top:10px">Constellations</h2>
+    <p>Constellations are patterns people have traced between bright stars to tell stories and find their way. Turn on <b>Constellations</b> to see famous ones; hover a constellation name for its story.</p>
+    <h2 style="margin-top:10px">The Solar System</h2>
+    <p>At the center is the <b>Sun</b>. Around it orbit eight planets — Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, and Neptune. Click any body or use the strip to fly there.</p>
+    <h2 style="margin-top:10px">Moons, Dwarfs & Comets</h2>
+    <p><b>Moons</b> circle planets; <b>dwarf planets</b> (Ceres, Eris, Makemake, Haumea) and <b>Halley’s comet</b> follow their own paths.</p>
+  </details>
+
+  <h2 style="margin-top:12px">Credits & licences</h2>
+  <ul>
+    <li><b>three.js</b> r0.187.0 (MIT) — 3D engine, controls.</li>
+    <li><b>astronomy-engine</b> 2.1.19 (MIT, Don Cross) — planet ephemeris (VSOP87).</li>
+    <li><b>Textures</b>: Solar System Scope (CC BY 4.0) via Wikimedia Commons (Sun, planets, Moon, Ceres, Haumea, Saturn ring, Milky Way). Eris, Makemake, Io/Europa/Ganymede/Callisto, Titan, Triton, Halley use procedural surfaces (declared, not silent).</li>
+    <li>Dwarf/comet orbits: Kepler propagation from JPL SBDB/Horizons-sourced elements (Wikipedia). Planets use VSOP87.</li>
+  </ul>
+  <p style="font-size:11px;color:rgba(242,239,230,0.55)">Positions are for wonder, not mission planning.</p>
+</div>
+
+<div id="intro" role="dialog" aria-label="Intro">
+  <div id="intro-inner">
+    <div id="intro-title">The Solar System</div>
+    <div id="intro-line">a small machine of clockwork light</div>
+    <div id="intro-cta">tap to explore</div>
+  </div>
+</div>
+<div id="intro-narration"></div>
+<div id="const-tooltip"></div>
+<button type="button" id="intro-skip" class="chip hud">Skip</button>
+
+<button type="button" id="milkyway-point" class="hud" title="Our Galaxy: The Milky Way" aria-label="Milky Way info">
+  <span class="mw-dot"></span><span>Milky Way</span>
+</button>
+
+<div id="labels"></div>
+
+<div id="loading" role="status" aria-live="polite">
+  <span id="loading-text">fetching the sky…</span>
+  <div class="bar"><i id="loading-bar"></i></div>
+</div>
+
+<div id="nogl"><p>This view needs WebGL2. Your browser doesn't offer it here —
+try a current Chrome, Firefox, Edge or Safari.</p></div>
+
+<!-- Pinned externals. Never unpinned: three@0.187.0, astronomy-engine@2.1.19. -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/",
+    "astronomy-engine": "https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/esm/astronomy.js"
+  }
+}
+</script>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
