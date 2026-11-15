@@ -65,3 +65,55 @@ Fix verified 2026-11-15 in headless Brave: after hoisting, `?tour=0`, `?body=hal
 Cursor zoom: verified against the pinned three.js 0.187 OrbitControls source
 (`zoomToCursor` supports wheel and pinch midpoint) and by `node --check` on
 app.js. Full browser runtime check deferred to respect the data-saver limit.
+
+## 2026-11-15 — Refactor (local)
+
+Branch `Refactor` only; `main` is untouched at `e84e4b6`. No new runtime
+dependencies: three.js and astronomy-engine stay pinned in `index.html`'s
+import map, tests run on `node --test`, nothing is bundled. Feature freeze —
+this is a move-only refactor; the only intentional behaviour change is that
+`easeOutQuint` (defined but never called upstream) is gone.
+
+| Date | Step | File | Purpose | Added | Removed |
+| --- | --- | --- | --- | --- | --- |
+| 2026-11-15 | A | package.json | `"type": "module"` so `node --test` can load the sources; `test` script | +11 | -0 |
+| 2026-11-15 | A | src/config.js | Scales, speeds, sky constants, easing functions | +42 | -0 |
+| 2026-11-15 | A | src/state.js | The one mutable store: time/view/sel plus ownership rules, device detection, URL date | +64 | -0 |
+| 2026-11-15 | A | src/astronomy/coordinates.js | J2000 epoch, EQJ→ecliptic rotation, scene mapping, RA/Dec, UTC formatting | +48 | -0 |
+| 2026-11-15 | A | src/astronomy/kepler.js | Kepler equation solver and two-body propagation for dwarfs/comets | +49 | -0 |
+| 2026-11-15 | A | src/astronomy/ephemeris.js | astronomy-engine adapter, isolated so the maths stays testable under Node | +32 | -0 |
+| 2026-11-15 | A | src/systems/time.js | Clock arithmetic as pure functions (clamp, advance, speed, pause) | +30 | -0 |
+| 2026-11-15 | A | tests/coordinates.test.js | 8 tests: epochs, rotation invariants, frame mapping, formatting | +69 | -0 |
+| 2026-11-15 | A | tests/kepler.test.js | 7 tests: solver residuals, Halley perihelion, finite positions | +73 | -0 |
+| 2026-11-15 | A | tests/time.test.js | 7 tests: speed ordering, advance, pause, clamping | +58 | -0 |
+| 2026-11-15 | B | src/data/bodies.js | Sun/planets/moons/dwarfs/comet tables as inert records | +107 | -0 |
+| 2026-11-15 | B | src/data/sky.js | Constellations and bright stars, unpicked from the anonymous build blocks | +74 | -0 |
+| 2026-11-15 | C | src/scene/bodies.js | Lights, body construction, comet tails, per-frame position pass | +268 | -0 |
+| 2026-11-15 | C | src/scene/structures.js | Saturn's rings, instanced belts, orbit polylines | +133 | -0 |
+| 2026-11-15 | C | src/scene/sky.js | Starfield, constellations, bright stars, ecliptic/equator grid | +195 | -0 |
+| 2026-11-15 | C | src/scene/labels.js | Projected DOM labels and the overlap-deconfliction pass | +90 | -0 |
+| 2026-11-15 | C | src/audio.js | WebAudio ambience and arrival chime, created on first enable | +65 | -0 |
+| 2026-11-15 | D | src/ctx.js | The cross-module entry points, filled once by the entry point | +18 | -0 |
+| 2026-11-15 | D | src/systems/interaction.js | Selection, fly-to/follow, fact card, strip, picking, keyboard, `?body` | +408 | -0 |
+| 2026-11-15 | D | src/systems/tour.js | Cinematic intro and fly-past; saves/restores the constellation overlay | +221 | -0 |
+| 2026-11-15 | E | src/ui/hud.js | Time controls, visibility toggles, info panel, Milky Way framing | +129 | -0 |
+| 2026-11-15 | E | src/ui/time-machine.js | Notable events, date jump, scrub slider, now/today | +84 | -0 |
+| 2026-11-15 | E | src/ui/chapters.js | Five chapters with step-through, built on the same public entry points | +156 | -0 |
+| 2026-11-15 | E | src/ui/toast.js | The transient one-line message, shared by entry point and HUD | +22 | -0 |
+| 2026-11-15 | E | src/main.js | Entry point: renderer, scene boot order, ctx wiring, animation loop | +225 | -0 |
+| 2026-11-15 | E | index.html | Script entry `app.js` → `src/main.js` | +1 | -1 |
+| 2026-11-15 | E | app.js | Deleted: the 1,873-line file this branch splits up | +0 | -1873 |
+| 2026-11-15 | E | Journal.md | This section | ~+40 | -0 |
+
+Verification: `node --test tests/` was 22/22 at every stage, including after
+`app.js` was removed; every module passes `node --check`. A headless Brave run
+against `http://localhost:8091/` once `index.html` pointed at `src/main.js`
+reported zero uncaught / ReferenceError / TypeError, with the ephemeris sanity
+log unchanged (Earth 0.989 AU, Mars 1.609 AU, Jupiter 5.322 AU; Kepler bodies
+as before).
+
+Deferred at the user's request: the info-panel and chapter click paths have
+not been driven in a browser since the last extraction. The headless harness
+began timing out on `--dump-dom` / `--screenshot` while the page still loaded
+and rendered, so that check belongs to the next step. Nothing is pushed — all
+six commits are local to `Refactor`.

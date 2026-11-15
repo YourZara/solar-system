@@ -39,5 +39,4 @@ export const DRAG_PX = 6;
 /* so they live with the other pure numbers, not with the DOM.         */
 /* ================================================================== */
 export const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-export const easeOutQuint = (t) => 1 - Math.pow(1 - t, 5);
 export const easeInOutQuint = (t) => (t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2);
