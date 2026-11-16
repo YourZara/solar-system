@@ -31,6 +31,7 @@ import {
 } from './systems/tour.js';
 import {
   initHud, applyToggles, refreshHud, updateDateReadout, isInfoPanelOpen, closeInfoPanel,
+  toggleInfoPanel,
 } from './ui/hud.js';
 import { initTimeMachine, setSimDate } from './ui/time-machine.js';
 import { initChapters } from './ui/chapters.js';
@@ -155,6 +156,7 @@ Object.assign(ctx, {
   applyToggles,
   isInfoPanelOpen,
   closeInfoPanel,
+  toggleInfoPanel,
   requestShot,
 });
 

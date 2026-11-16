@@ -15,7 +15,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>The Solar System</title>
+<title>The Solar System — real-time 3D orrery</title>
+<meta name="description" content="Explore a real-3D solar system in your browser: true planet positions for any date, a time machine, guided tour, constellations and a live sky.">
+<meta name="theme-color" content="#05060a">
+<meta property="og:title" content="The Solar System">
+<meta property="og:description" content="Travel to any date and see where the planets really were.">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -102,6 +106,17 @@
   <h2 style="margin-top:12px">Chapters</h2>
   <p style="margin-bottom:6px">Guided tour of what’s here:</p>
   <div id="chapters-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px"></div>
+
+  <h2 style="margin-top:12px">Keyboard</h2>
+  <div class="kbd-grid">
+    <span><kbd>Space</kbd> pause</span><span><kbd>R</kbd> reverse time</span>
+    <span><kbd>,</kbd> <kbd>.</kbd> speed</span><span><kbd>←</kbd> <kbd>→</kbd> bodies</span>
+    <span><kbd>L</kbd> labels</span><span><kbd>O</kbd> orbits</span>
+    <span><kbd>C</kbd> constellations</span><span><kbd>G</kbd> grid</span>
+    <span><kbd>T</kbd> true scale</span><span><kbd>B</kbd> belts</span>
+    <span><kbd>P</kbd> screenshot</span><span><kbd>X</kbd> trace · <kbd>⇧X</kbd> clear</span>
+    <span><kbd>H</kbd> home</span><span><kbd>?</kbd> this panel</span>
+  </div>
 
   <details style="margin-top:8px">
     <summary style="cursor:pointer;color:var(--accent);font-size:12px">Read full guide</summary>

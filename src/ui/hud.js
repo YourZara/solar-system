@@ -92,6 +92,7 @@ export function applyToggles() {
 /* --- Info panel ----------------------------------------------------- */
 export function openInfoPanel() { infoPanel.classList.add('open'); }
 export function closeInfoPanel() { infoPanel.classList.remove('open'); }
+export function toggleInfoPanel() { infoPanel.classList.toggle('open'); }
 export function isInfoPanelOpen() { return infoPanel.classList.contains('open'); }
 
 /* --- Milky Way framing ---------------------------------------------- */

@@ -12,7 +12,7 @@ import { AU_UNITS, DRAG_PX, easeInOutCubic, easeInOutQuint } from '../config.js'
 import { view, sel, time, bodyRadiusUnits } from '../state.js';
 import { BODIES, MOONS, KEPLER_BODIES } from '../data/bodies.js';
 import { bodiesByKey, moonsByKey } from '../scene/bodies.js';
-import { togglePause, toggleReverse } from './time.js';
+import { togglePause, toggleReverse, changeSpeed } from './time.js';
 import { traceIntercept, clearTrails } from './trails.js';
 import { playChime } from '../audio.js';
 import { ctx } from '../ctx.js';
@@ -403,12 +403,21 @@ export function initInteraction(deps) {
     }
     else if (e.code === 'ArrowRight') { e.preventDefault(); stepSelection(1); }
     else if (e.code === 'ArrowLeft') { e.preventDefault(); stepSelection(-1); }
+    // Never steal the browser's own shortcuts: Ctrl+C is copy, not constellations.
+    else if (e.ctrlKey || e.metaKey || e.altKey) return;
+    else if (e.key === '.') { changeSpeed(time, +1); ctx.refreshHud(); }
+    else if (e.key === ',') { changeSpeed(time, -1); ctx.refreshHud(); }
+    else if (e.key === 'r' || e.key === 'R') { toggleReverse(time); ctx.refreshHud(); }
     else if (e.key === 'l' || e.key === 'L') { view.labels = !view.labels; ctx.applyToggles(); }
     else if (e.key === 'o' || e.key === 'O') { view.orbits = !view.orbits; ctx.applyToggles(); }
+    else if (e.key === 't' || e.key === 'T') { view.trueScale = !view.trueScale; ctx.applyToggles(); }
+    else if (e.key === 'c' || e.key === 'C') { view.constellations = !view.constellations; ctx.applyToggles(); }
+    else if (e.key === 'g' || e.key === 'G') { view.grid = !view.grid; ctx.applyToggles(); }
+    else if (e.key === 'b' || e.key === 'B') { view.belts = !view.belts; ctx.applyToggles(); }
     else if (e.key === 'h' || e.key === 'H') { resetHome(false); }
-    else if (e.key === 'r' || e.key === 'R') { toggleReverse(time); ctx.refreshHud(); }
+    else if (e.key === 'p' || e.key === 'P') { ctx.requestShot(); }
     else if (e.key === 'x') { view.trace = !view.trace; ctx.applyToggles(); }
     else if (e.key === 'X') { clearTrails(); }
-    else if (e.key === 'p' || e.key === 'P') { ctx.requestShot(); }
+    else if (e.key === '?') { ctx.toggleInfoPanel(); }
   });
 }
