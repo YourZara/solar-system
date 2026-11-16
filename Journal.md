@@ -117,3 +117,60 @@ not been driven in a browser since the last extraction. The headless harness
 began timing out on `--dump-dom` / `--screenshot` while the page still loaded
 and rendered, so that check belongs to the next step. Nothing is pushed — all
 six commits are local to `Refactor`.
+
+## 2026-11-16 — Trace (features ported from the parallel build)
+
+Branch `Trace`, cut from `a949e05`. `main` stays at `e84e4b6` and `Refactor`
+is untouched. No new dependencies. Five commits, one feature each:
+
+`12980db` clock · `3c6cb1f` star precession · `a2021da` motion tracer ·
+`e900909` screenshot + share · `3bb3098` keyboard map + meta.
+
+| Date | Step | File | Purpose | Added | Removed |
+|---|---|---|---|---|---|
+| 2026-11-16 | Clock | src/config.js | `1 hour/s` tier between real time and 1 day/s | +1 | -0 |
+| 2026-11-16 | Clock | src/state.js | `time.dir` and `speedIdx` 2 so startup stays 1 day/s | +3 | -1 |
+| 2026-11-16 | Clock | src/systems/time.js | `advanceClock` honours direction; `toggleReverse` resumes a paused clock | +12 | -2 |
+| 2026-11-16 | Clock | src/ui/hud.js | Reverse button wiring and a ◀ prefix on the speed label | +5 | -2 |
+| 2026-11-16 | Clock | index.html | Reverse button; key hints in the time-control titles | +4 | -3 |
+| 2026-11-16 | Clock | src/systems/interaction.js | `R` shortcut | +2 | -1 |
+| 2026-11-16 | Clock | tests/time.test.js | Reverse, default direction, new tier, resume-on-reverse | +30 | -1 |
+| 2026-11-16 | Star paths | src/astronomy/coordinates.js | Precession pole, angle and Rodrigues rotation (pure, Node-testable) | +36 | -0 |
+| 2026-11-16 | Star paths | src/scene/star-paths.js | Path geometry, markers on the sim date, disposal on toggle | +99 | -0 |
+| 2026-11-16 | Star paths | src/scene/sky.js | Register bright stars; report label clicks through a dep | +8 | -2 |
+| 2026-11-16 | Star paths | src/main.js | Init order, toggle callback with toast, per-frame marker update | +14 | -1 |
+| 2026-11-16 | Star paths | tests/precession.test.js | Period, linearity, unit pole, length, right-hand rule | +46 | -0 |
+| 2026-11-16 | Motion tracer | src/systems/trail-buffer.js | Ring buffer, min-step filter, jump detection (pure) | +61 | -0 |
+| 2026-11-16 | Motion tracer | src/systems/trails.js | Relative-to-centre tracer, panel, save/load/export/import | +264 | -0 |
+| 2026-11-16 | Motion tracer | src/systems/interaction.js | `traceIntercept` in flyTo; `X` clears trails | +4 | -0 |
+| 2026-11-16 | Motion tracer | src/main.js | `initTrails` deps and per-frame `recordTrails` | +9 | -1 |
+| 2026-11-16 | Motion tracer | src/state.js | `view.trace` (session-only, not persisted) | +4 | -0 |
+| 2026-11-16 | Motion tracer | src/ui/hud.js | Persist the toggle set without `trace` | +5 | -1 |
+| 2026-11-16 | Motion tracer | index.html | Trace toggle, trail panel, file input | +19 | -0 |
+| 2026-11-16 | Motion tracer | style.css | Trail panel, chip `on` state, mobile position | +13 | -0 |
+| 2026-11-16 | Motion tracer | tests/trails.test.js | Append, trim, min step, pause, jump, seed | +92 | -0 |
+| 2026-11-16 | Screenshot + share | src/ui/screenshot.js | Flag consumed right after render (no `preserveDrawingBuffer`) | +37 | -0 |
+| 2026-11-16 | Screenshot + share | src/ui/share-url.js | Pure share URL builder | +15 | -0 |
+| 2026-11-16 | Screenshot + share | src/ui/share-link.js | Current moment + clipboard, with a visible fallback | +30 | -0 |
+| 2026-11-16 | Screenshot + share | src/ui/hud.js | Wire 📷 and 🔗 | +7 | -0 |
+| 2026-11-16 | Screenshot + share | src/systems/interaction.js | `P` shortcut through `ctx` | +1 | -0 |
+| 2026-11-16 | Screenshot + share | src/main.js | `initScreenshot`, `ctx.requestShot`, capture after render | +4 | -0 |
+| 2026-11-16 | Screenshot + share | index.html | 📷 and 🔗 buttons | +2 | -0 |
+| 2026-11-16 | Screenshot + share | tests/share-link.test.js | Date, body, `tour=0`, base path | +28 | -0 |
+| 2026-11-16 | Keyboard + meta | src/systems/interaction.js | Full key map; modifier guard so Ctrl+C stays copy | +12 | -3 |
+| 2026-11-16 | Keyboard + meta | src/ui/hud.js | `toggleInfoPanel` | +1 | -0 |
+| 2026-11-16 | Keyboard + meta | src/main.js | Expose `toggleInfoPanel` through `ctx` | +2 | -0 |
+| 2026-11-16 | Keyboard + meta | index.html | Keyboard grid; description and OG tags | +16 | -1 |
+| 2026-11-16 | Keyboard + meta | style.css | `kbd`, focus rings, reduced-motion, panel rise | +28 | -0 |
+
+Verification: `npm test` is 47/47 (was 22/22) and every module passes
+`node --check`. Headless Brave against `http://localhost:8091/` boots with the
+ephemeris sanity log intact and zero uncaught / ReferenceError / TypeError,
+both on `/` and on `/?body=mars`. The headless `--screenshot` / `--dump-dom`
+timeout is unchanged and is a `ReadPixels` stall in the harness, not a page
+fault — it predates this work and was reproduced on the baseline first.
+
+Not driven in a browser yet: tracer clicks, star-path clicks, the screenshot
+capture, and clipboard copy. Those belong to the deferred browser pass. Not
+pushed and not merged into `Refactor`.
+

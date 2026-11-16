@@ -221,7 +221,8 @@ function renderList() {
 
 let allStars = false;
 function renderStarBtn() {
-  allStars = starPathNames().length > 0 && allStars;
+  // Derive from the scene, so a restored save file lights the button too.
+  allStars = starPathNames().length > 0;
   starBtn.classList.toggle('on', allStars);
 }
 
@@ -247,10 +248,10 @@ export function initTrails(deps) {
   document.getElementById('tr-export').addEventListener('click', exportFile);
   document.getElementById('tr-import').addEventListener('click', () => fileEl.click());
   starBtn.addEventListener('click', () => {
-    allStars = !allStars;
-    setAllStarPaths(allStars);
+    const on = !allStars;
+    setAllStarPaths(on);
     renderStarBtn();
-    if (allStars) notify('Star paths: precession circles, a tick ≈ every 1,000 years');
+    if (on) notify('Star paths: precession circles, a tick ≈ every 1,000 years');
   });
   fileEl.addEventListener('change', async () => {
     try { applySnapshot(JSON.parse(await fileEl.files[0].text())); }
