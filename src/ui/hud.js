@@ -14,7 +14,7 @@ import { bodiesByKey, moonsByKey } from '../scene/bodies.js';
 import { orbitLines, beltGroups } from '../scene/structures.js';
 import { labelsRoot } from '../scene/labels.js';
 import { constellationGroup, brightStarsGroup, skyGridGroup } from '../scene/sky.js';
-import { togglePause, changeSpeed } from '../systems/time.js';
+import { togglePause, changeSpeed, toggleReverse } from '../systems/time.js';
 import { onSoundToggle } from '../audio.js';
 import { startTour } from '../systems/tour.js';
 import { showCustomCard } from '../systems/interaction.js';
@@ -22,6 +22,7 @@ import { showCustomCard } from '../systems/interaction.js';
 const dateReadout = document.getElementById('date-readout');
 const speedLabel = document.getElementById('speed-label');
 const btnPause = document.getElementById('btn-pause');
+const btnReverse = document.getElementById('btn-reverse');
 const btnSlower = document.getElementById('btn-slower');
 const btnFaster = document.getElementById('btn-faster');
 const infoPanel = document.getElementById('info-panel');
@@ -35,7 +36,8 @@ let controls = null;
 
 /* --- Clock readout -------------------------------------------------- */
 export function refreshHud() {
-  speedLabel.textContent = SPEEDS[time.speedIdx].label;
+  speedLabel.textContent = (time.dir < 0 ? '◀ ' : '') + SPEEDS[time.speedIdx].label;
+  if (btnReverse) btnReverse.classList.toggle('on', time.dir < 0);
   btnPause.textContent = time.paused ? '▶' : '⏸';
   btnPause.classList.toggle('on', time.paused);
 }
@@ -105,6 +107,7 @@ export function initHud(deps) {
   controls = deps.controls;
 
   btnPause.addEventListener('click', () => { togglePause(time); refreshHud(); });
+  if (btnReverse) btnReverse.addEventListener('click', () => { toggleReverse(time); refreshHud(); });
   btnSlower.addEventListener('click', () => { changeSpeed(time, -1); refreshHud(); });
   btnFaster.addEventListener('click', () => { changeSpeed(time, +1); refreshHud(); });
 

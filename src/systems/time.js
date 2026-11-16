@@ -12,10 +12,12 @@ export const MAX_DT_S = 0.1;
 export function clampDt(seconds) { return Math.min(seconds, MAX_DT_S); }
 
 /* Advance the clock by dtSeconds of real time. Returns the new simMs.
-   prevSimMs is always recorded — the render loop uses it for spin. */
+   prevSimMs is always recorded — the render loop uses it for spin.
+   time.dir is +1 or -1; an object without one (older callers, tests)
+   still runs forward. */
 export function advanceClock(time, dtSeconds, speeds = SPEEDS) {
   time.prevSimMs = time.simMs;
-  if (!time.paused) time.simMs += dtSeconds * 1000 * speeds[time.speedIdx].mult;
+  if (!time.paused) time.simMs += dtSeconds * 1000 * speeds[time.speedIdx].mult * (time.dir ?? 1);
   return time.simMs;
 }
 
@@ -27,4 +29,12 @@ export function changeSpeed(time, delta, speeds = SPEEDS) {
 export function togglePause(time) {
   time.paused = !time.paused;
   return time.paused;
+}
+
+/* Reverse is a direction, not a pause: pressing it on a paused clock
+   resumes it, so the user sees the motion they just asked for. */
+export function toggleReverse(time) {
+  time.dir = (time.dir ?? 1) * -1;
+  if (time.paused) time.paused = false;
+  return time.dir;
 }

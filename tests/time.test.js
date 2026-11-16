@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { advanceClock, clampDt, changeSpeed, togglePause, MAX_DT_S } from '../src/systems/time.js';
+import { advanceClock, clampDt, changeSpeed, togglePause, toggleReverse, MAX_DT_S } from '../src/systems/time.js';
 import { SPEEDS } from '../src/config.js';
 
 const clock = (over = {}) => ({ simMs: 1_000_000, paused: false, speedIdx: 1, prevSimMs: 1_000_000, ...over });
@@ -55,4 +55,33 @@ test('togglePause flips and reports', () => {
   assert.equal(togglePause(t), true);
   assert.equal(t.paused, true);
   assert.equal(togglePause(t), false);
+});
+
+/* --- direction of time ---------------------------------------------- */
+
+test('the default speed index is still 1 day/s after the new tier', () => {
+  // state.js starts at speedIdx 2 and documents "1 day/s"; config must agree.
+  assert.equal(SPEEDS[1].label, '1 hour/s');
+  assert.equal(SPEEDS[2].label, '1 day/s');
+});
+
+test('advance moves backwards when the clock is reversed', () => {
+  const t = clock({ speedIdx: 2, dir: -1 });
+  advanceClock(t, 0.5);
+  assert.equal(t.simMs, 1_000_000 - 0.5 * 1000 * SPEEDS[2].mult);
+});
+
+test('a clock without a direction runs forward', () => {
+  const t = clock({ speedIdx: 2 });
+  delete t.dir;
+  advanceClock(t, 0.5);
+  assert.equal(t.simMs, 1_000_000 + 0.5 * 1000 * SPEEDS[2].mult);
+});
+
+test('toggleReverse flips direction and resumes a paused clock', () => {
+  const t = clock({ paused: true });
+  assert.equal(toggleReverse(t), -1);
+  assert.equal(t.dir, -1);
+  assert.equal(t.paused, false, 'asking for motion should not leave it paused');
+  assert.equal(toggleReverse(t), 1);
 });

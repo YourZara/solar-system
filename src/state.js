@@ -12,10 +12,12 @@
 import { kmToUnits, compressedRadius, trueRadius } from './config.js';
 
 /* --- simulation clock --- */
+/* --- simulation clock --- */
 export const time = {
   simMs: Date.now(),
   paused: false,
-  speedIdx: 1, // start at 1 day/s — the system should visibly live
+  dir: 1,       // -1 runs the clock backwards; toggled from the HUD or "R"
+  speedIdx: 2,  // start at 1 day/s — the system should visibly live
   prevSimMs: Date.now(),
 };
 

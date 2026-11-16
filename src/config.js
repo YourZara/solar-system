@@ -10,6 +10,7 @@ export const W = 'https://upload.wikimedia.org/wikipedia/commons/';
 /* Simulation speeds. mult is "simulated ms per real ms". */
 export const SPEEDS = [
   { label: 'real time',   mult: 1 },
+  { label: '1 hour/s',    mult: 3600 },
   { label: '1 day/s',     mult: 86400 },
   { label: '1 month/s',   mult: 2592000 },
   { label: '1 yr/s',      mult: 31557600 },
