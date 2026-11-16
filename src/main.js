@@ -34,6 +34,7 @@ import {
 } from './ui/hud.js';
 import { initTimeMachine, setSimDate } from './ui/time-machine.js';
 import { initChapters } from './ui/chapters.js';
+import { initScreenshot, takePendingShot, requestShot } from './ui/screenshot.js';
 import { initTrails, recordTrails } from './systems/trails.js';
 import { showToast } from './ui/toast.js';
 import { ctx } from './ctx.js';
@@ -132,6 +133,7 @@ initSky({
 initHud({ camera, controls });
 initTimeMachine();
 initChapters({ camera, controls });
+initScreenshot({ canvas, notify: showToast });
 
 /* ================================================================== */
 /* Interaction and the tour, then the shared entry points              */
@@ -153,6 +155,7 @@ Object.assign(ctx, {
   applyToggles,
   isInfoPanelOpen,
   closeInfoPanel,
+  requestShot,
 });
 
 parseUrlParams();
@@ -243,4 +246,5 @@ renderer.setAnimationLoop(() => {
 
   controls.update();
   renderer.render(scene, camera);
+  takePendingShot(); // same task as the render: the buffer is still valid
 });

@@ -409,5 +409,6 @@ export function initInteraction(deps) {
     else if (e.key === 'r' || e.key === 'R') { toggleReverse(time); ctx.refreshHud(); }
     else if (e.key === 'x') { view.trace = !view.trace; ctx.applyToggles(); }
     else if (e.key === 'X') { clearTrails(); }
+    else if (e.key === 'p' || e.key === 'P') { ctx.requestShot(); }
   });
 }

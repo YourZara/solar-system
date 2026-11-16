@@ -18,6 +18,9 @@ import { togglePause, changeSpeed, toggleReverse } from '../systems/time.js';
 import { onSoundToggle } from '../audio.js';
 import { startTour } from '../systems/tour.js';
 import { showCustomCard } from '../systems/interaction.js';
+import { requestShot } from './screenshot.js';
+import { copyShareLink } from './share-link.js';
+import { showToast } from './toast.js';
 
 const dateReadout = document.getElementById('date-readout');
 const speedLabel = document.getElementById('speed-label');
@@ -29,6 +32,8 @@ const infoPanel = document.getElementById('info-panel');
 const infoClose = document.getElementById('info-close');
 const btnInfo = document.getElementById('btn-info');
 const btnReplay = document.getElementById('btn-replay');
+const btnShot = document.getElementById('btn-shot');
+const btnShare = document.getElementById('btn-share');
 const milkyWayBtn = document.getElementById('milkyway-point');
 
 let camera = null;
@@ -118,6 +123,8 @@ export function initHud(deps) {
   btnInfo.addEventListener('click', () => infoPanel.classList.toggle('open'));
   infoClose.addEventListener('click', closeInfoPanel);
   btnReplay.addEventListener('click', () => { closeInfoPanel(); startTour(true); });
+  if (btnShot) btnShot.addEventListener('click', requestShot);
+  if (btnShare) btnShare.addEventListener('click', () => copyShareLink({ notify: showToast }));
   if (milkyWayBtn) milkyWayBtn.addEventListener('click', showGalaxy);
 
   toggleBtns.forEach((btn) => btn.addEventListener('click', () => {
