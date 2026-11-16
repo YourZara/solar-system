@@ -11,6 +11,7 @@ import { W, SKYBOX_RADIUS, STAR_COUNTS } from '../config.js';
 import { lowPower, view } from '../state.js';
 import { OBLIQUITY, radecToVector } from '../astronomy/coordinates.js';
 import { CONSTELLATIONS, BRIGHT_STARS } from '../data/sky.js';
+import { registerStar } from './star-paths.js';
 
 const v3 = (p) => new THREE.Vector3(p.x, p.y, p.z);
 
@@ -26,7 +27,7 @@ export function hideConstTooltip() { hideTooltipImpl(); }
 const _proj = new THREE.Vector3();
 
 export function initSky(deps) {
-  const { scene, textureLoader, labelsRoot } = deps;
+  const { scene, textureLoader, labelsRoot, onStarPathToggle } = deps;
 
   /* --- Starfield --- */
   const milkyWay = textureLoader.load(
@@ -113,6 +114,7 @@ export function initSky(deps) {
       // keep in equatorial frame for consistency with constellations
       const pEq = v3(radecToVector(s.ra, s.dec, R));
       posArr.push(pEq.x, pEq.y, pEq.z);
+      registerStar(s.name, pEq);
       const el = document.createElement('div');
       el.className = 'const-label';
       el.style.color = 'rgba(242,239,230,0.7)';
@@ -121,7 +123,11 @@ export function initSky(deps) {
       el.addEventListener('mouseenter', (e) => showTip(s.name, s.info, e.clientX, e.clientY));
       el.addEventListener('mousemove', (e) => showTip(s.name, s.info, e.clientX, e.clientY));
       el.addEventListener('mouseleave', hideConstTooltip);
-      el.addEventListener('click', (e) => { e.stopPropagation(); showTip(s.name, s.info, e.clientX, e.clientY); });
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showTip(s.name, s.info, e.clientX, e.clientY);
+        if (onStarPathToggle) onStarPathToggle(s.name);
+      });
       labelsRoot.appendChild(el);
       brightStarLabels.push({ el, pos: pEq });
     });

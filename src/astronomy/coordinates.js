@@ -46,3 +46,39 @@ export function formatUtc(ms) {
   return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ` +
          `${p(d.getUTCHours())}:${p(d.getUTCMinutes())} UTC`;
 }
+
+/* ================================================================== */
+/* Precession                                                          */
+/*                                                                     */
+/* Earth's axis wobbles once per ~25,772 years, so every star's RA/Dec */
+/* traces a small circle around the ecliptic pole. We draw that circle.*/
+/* Proper motion is not modelled: it is tiny next to precession.       */
+/* ================================================================== */
+export const PRECESSION_PERIOD_YEARS = 25772;
+
+/* North ecliptic pole in the same frame as radecToVector(). */
+export function eclipticPole() {
+  return { x: 0, y: Math.cos(OBLIQUITY), z: Math.sin(OBLIQUITY) };
+}
+
+/* Days since J2000 -> angle swept around that pole, in radians. */
+export function precessionAngle(days) {
+  return (days / 365.25 / PRECESSION_PERIOD_YEARS) * Math.PI * 2;
+}
+
+/* Rodrigues rotation of v about a unit axis, right-handed. Pure. */
+export function rotateAboutAxis(v, axis, angle) {
+  const c = Math.cos(angle), s = Math.sin(angle);
+  const dot = v.x * axis.x + v.y * axis.y + v.z * axis.z;
+  const cross = {
+    x: axis.y * v.z - axis.z * v.y,
+    y: axis.z * v.x - axis.x * v.z,
+    z: axis.x * v.y - axis.y * v.x,
+  };
+  const k = dot * (1 - c);
+  return {
+    x: v.x * c + cross.x * s + axis.x * k,
+    y: v.y * c + cross.y * s + axis.y * k,
+    z: v.z * c + cross.z * s + axis.z * k,
+  };
+}

@@ -20,6 +20,7 @@ import { initBodies, bodiesByKey } from './scene/bodies.js';
 import { initStructures, updateBelts, beltGroups } from './scene/structures.js';
 import { initLabels, updateLabels } from './scene/labels.js';
 import { initSky, updateConstellationLabels, updateBrightStarLabels } from './scene/sky.js';
+import { initStarPaths, toggleStarPath, updateStarMarkers } from './scene/star-paths.js';
 import { clampDt, advanceClock } from './systems/time.js';
 import {
   initInteraction, updateInteraction,
@@ -111,7 +112,18 @@ const textureLoader = new THREE.TextureLoader(manager);
 const { updatePositions } = initBodies({ scene, textureLoader, renderer });
 initStructures({ scene, textureLoader });
 initLabels();
-initSky({ scene, textureLoader, labelsRoot: document.getElementById('labels') });
+initStarPaths({ scene });
+initSky({
+  scene,
+  textureLoader,
+  labelsRoot: document.getElementById('labels'),
+  // Scene code does not talk to the UI; the entry point decides how to
+  // report the result of clicking a star.
+  onStarPathToggle: (name) => {
+    const on = toggleStarPath(name);
+    showToast(on ? `${name}: precession path traced (tick ≈ 1,000 yr)` : `${name}: path hidden`);
+  },
+});
 
 /* ================================================================== */
 /* UI — toggles, time machine, chapters, info panel                    */
@@ -196,6 +208,7 @@ renderer.setAnimationLoop(() => {
   }
 
   updatePositions(time.simMs);
+  updateStarMarkers(time.simMs);
   if (consumePendingTour()) startTour(false);
   const pendingBody = consumePendingBody();
   if (pendingBody) {
