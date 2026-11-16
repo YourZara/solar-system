@@ -77,7 +77,11 @@ export function applyToggles() {
   for (const btn of toggleBtns) {
     if (btn.dataset.toggle) btn.classList.toggle('on', !!view[btn.dataset.toggle]);
   }
-  try { localStorage.setItem('sol-toggles', JSON.stringify(view)); } catch { /* private mode */ }
+  try {
+    // `trace` is a session mode, not a remembered preference.
+    const { trace, ...persisted } = view;
+    localStorage.setItem('sol-toggles', JSON.stringify(persisted));
+  } catch { /* private mode */ }
 }
 
 /* --- Info panel ----------------------------------------------------- */

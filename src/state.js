@@ -22,9 +22,13 @@ export const time = {
 };
 
 /* --- what the user has switched on, remembered across reloads --- */
+/* `trace` is deliberately excluded from the saved preferences: trails
+   themselves are not persisted, so restoring the flag would open an
+   empty tracer on every reload. */
 export const view = {
   labels: true, orbits: true, belts: true, constellations: false,
   brightStars: false, grid: false, trueScale: false, sound: false, // mute by default
+  trace: false,
 };
 
 /* --- selection / camera follow. Written by systems/interaction.js --- */

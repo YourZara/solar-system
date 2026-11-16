@@ -13,6 +13,7 @@ import { view, sel, time, bodyRadiusUnits } from '../state.js';
 import { BODIES, MOONS, KEPLER_BODIES } from '../data/bodies.js';
 import { bodiesByKey, moonsByKey } from '../scene/bodies.js';
 import { togglePause, toggleReverse } from './time.js';
+import { traceIntercept, clearTrails } from './trails.js';
 import { playChime } from '../audio.js';
 import { ctx } from '../ctx.js';
 
@@ -177,6 +178,7 @@ export function deselect() {
 }
 
 export function flyTo(s, immediate = false) {
+  if (traceIntercept(s)) return; // tracing: keep the centre fixed, just add the path
   sel.current = s;
   sel.follow = false;
   controls.zoomToCursor = false; // keep zoom centred on the selected body
@@ -405,5 +407,7 @@ export function initInteraction(deps) {
     else if (e.key === 'o' || e.key === 'O') { view.orbits = !view.orbits; ctx.applyToggles(); }
     else if (e.key === 'h' || e.key === 'H') { resetHome(false); }
     else if (e.key === 'r' || e.key === 'R') { toggleReverse(time); ctx.refreshHud(); }
+    else if (e.key === 'x') { view.trace = !view.trace; ctx.applyToggles(); }
+    else if (e.key === 'X') { clearTrails(); }
   });
 }

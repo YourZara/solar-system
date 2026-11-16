@@ -32,8 +32,9 @@ import {
 import {
   initHud, applyToggles, refreshHud, updateDateReadout, isInfoPanelOpen, closeInfoPanel,
 } from './ui/hud.js';
-import { initTimeMachine } from './ui/time-machine.js';
+import { initTimeMachine, setSimDate } from './ui/time-machine.js';
 import { initChapters } from './ui/chapters.js';
+import { initTrails, recordTrails } from './systems/trails.js';
 import { showToast } from './ui/toast.js';
 import { ctx } from './ctx.js';
 
@@ -137,6 +138,12 @@ initChapters({ camera, controls });
 /* ================================================================== */
 initInteraction({ camera, controls, canvas });
 initTour({ camera, controls });
+initTrails({
+  scene,
+  notify: showToast,
+  setSimDate,
+  applyToggles,
+});
 
 Object.assign(ctx, {
   isTouring,
@@ -209,6 +216,7 @@ renderer.setAnimationLoop(() => {
 
   updatePositions(time.simMs);
   updateStarMarkers(time.simMs);
+  recordTrails(time.simMs, dt);
   if (consumePendingTour()) startTour(false);
   const pendingBody = consumePendingBody();
   if (pendingBody) {

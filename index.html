@@ -47,6 +47,7 @@
   <button type="button" data-toggle="grid">Grid</button>
   <button type="button" data-toggle="trueScale">True scale</button>
   <button type="button" data-toggle="belts" class="on">Belts</button>
+  <button type="button" data-toggle="trace" title="Trace orbits: click bodies to leave trails (X)">Trace</button>
   <button type="button" data-toggle="sound">Sound</button>
   <button type="button" id="btn-home" title="Reset view (Home)">⌂</button>
   <button type="button" id="btn-info" title="Credits and replay">ⓘ</button>
@@ -58,6 +59,24 @@
   <button type="button" id="btn-slower" title="Slower (,)" aria-label="Slower">‹</button>
   <span id="speed-label">1 day/s</span>
   <button type="button" id="btn-faster" title="Faster (.)" aria-label="Faster">›</button>
+</div>
+
+<div id="trail-panel" class="hud" aria-label="Motion tracer">
+  <div class="tp-title">Motion tracer</div>
+  <p class="tp-hint">1. Click a body (e.g. Earth): it becomes the fixed centre. 2. Click others (e.g. Mars): their paths are traced as seen from it. Press play.</p>
+  <div id="tr-centre"></div>
+  <div id="tr-list"></div>
+  <div class="tp-row">
+    <button type="button" id="tr-stars" class="chip" title="Show every bright star's precession path">✦ Star paths</button>
+    <button type="button" id="tr-clear" class="chip" title="Remove all trails (Shift+X)">Clear</button>
+  </div>
+  <div class="tp-row">
+    <button type="button" id="tr-save" class="chip" title="Save to this browser">Save</button>
+    <button type="button" id="tr-load" class="chip" title="Load from this browser">Load</button>
+    <button type="button" id="tr-export" class="chip" title="Download as JSON">Export</button>
+    <button type="button" id="tr-import" class="chip" title="Load a JSON file">Import</button>
+  </div>
+  <input type="file" id="tr-file" accept="application/json" hidden>
 </div>
 
 <div id="body-strip" class="hud" role="toolbar" aria-label="Bodies"></div>
